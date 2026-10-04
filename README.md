@@ -1,4 +1,5 @@
-# ECP SOAP to JSON Agentic Migration CLI
+﻿# SOAP2JSON Migration Agent
+### WSDLift — Agentic SOAP to JSON Migration Tool
 
 An end-to-end Agentic AI Migration tool designed to automate the conversion of legacy SOAP/WSDL services into modern JSON API endpoints and Java Spring DTOs. 
 
@@ -9,6 +10,7 @@ By leveraging LangGraph and Google's Gemini models (or OpenAI), this pipeline dy
 - **Reference-Aware:** Learns your team's exact coding standards and annotations by scanning your existing `references/entity` Java DTOs.
 - **Agentic Pipeline:** Uses LangGraph to orchestrate a reliable 3-step pipeline: `Extract` -> `Generate` -> `Validate`.
 - **Validation:** Automatically validates the generated JSON and Java code before writing the artifacts.
+- **Multi-File Output:** Each generated Java DTO class is saved as its own individual `.java` file (e.g., `CustomerProfile.java`, `AuditHeaderType.java`), keeping your output clean and ready for direct import into your project.
 
 ---
 
@@ -72,9 +74,12 @@ python cli.py --wsdl ./inputs --ref ./references/entity --out ./outputs
    - **Extract Node:** Parses the XML schemas inside `./inputs`.
    - **Generate Node:** Sends the parsed schema + Java reference context to the LLM (Gemini) to generate the modern API contract and code.
    - **Validate Node:** Verifies that valid JSON and Java syntax were returned.
-3. **Artifact Generation:** Saves the validated outputs.
+3. **Artifact Generation:** Saves the validated outputs to the `./outputs/` folder.
 
 ### Outputs
 Once successfully executed, check the `./outputs/` folder. You will find:
 - **`schema_contract.json`**: The newly generated OpenAPI-compliant JSON schema contract.
-- **`GeneratedDTOs.java`**: The modern Java Spring DTO classes reflecting your target architecture.
+- **Individual Java DTO files:** Each Java class is saved as its own separate file, named after the class (e.g., `CustomerProfile.java`, `AuditHeaderType.java`, `ServiceRequest.java`). This makes the output directly importable into your Spring Boot project without any manual splitting.
+
+> **Note:** If the LLM does not use the expected `// FILE: <ClassName>.java` delimiter format in its response, the tool falls back to saving all generated code into a single `GeneratedDTOs.java` file.
+
