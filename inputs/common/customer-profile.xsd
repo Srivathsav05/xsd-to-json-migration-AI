@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://w3.org"
+           targetNamespace="http://legacy.soap"
+           xmlns:tns="http://legacy.soap"
+           xmlns:common="http://legacy.soap"
+           elementFormDefault="qualified">
+
+    <!-- Import common structural schemas -->
+    <xs:import namespace="http://legacy.soap" schemaLocation="../common/core-types.xsd"/>
+
+    <!-- Root Request Element -->
+    <xs:element name="GetCustomerProfileRequest">
+        <xs:complexType>
+            <xs:sequence>
+                <xs:element name="Header" type="common:AuditHeaderType"/>
+                <xs:element name="CustomerId" type="xs:string"/>
+                <xs:element name="AuthenticationToken" type="xs:string" minOccurs="0"/>
+            </xs:sequence>
+        </xs:complexType>
+    </xs:element>
+
+    <!-- Root Response Element -->
+    <xs:element name="GetCustomerProfileResponse">
+        <xs:complexType>
+            <xs:sequence>
+                <xs:element name="Header" type="common:AuditHeaderType"/>
+                <xs:element name="ProfileData" type="tns:ProfileDataType" minOccurs="0"/>
+                <xs:element name="Fault" type="common:ServiceFaultType" minOccurs="0"/>
+            </xs:sequence>
+        </xs:complexType>
+    </xs:element>
+
+    <!-- Nested Complex Structure to Evaluate JSON flattening -->
+    <xs:complexType name="ProfileDataType">
+        <xs:sequence>
+            <xs:element name="FirstName" type="xs:string"/>
+            <xs:element name="LastName" type="xs:string"/>
+            <xs:element name="ContactDetails" type="tns:ContactDetailsType"/>
+            <xs:element name="Preferences" type="tns:PreferencesType" maxOccurs="unbounded"/>
+        </xs:sequence>
+        <xs:attribute name="status" type="xs:string" use="required"/>
+    </xs:complexType>
+
+    <!-- Choice Block Strategy Tester -->
+    <xs:complexType name="ContactDetailsType">
+        <xs:sequence>
+            <xs:element name="EmailAddress" type="xs:string"/>
+            <xs:choice>
+                <xs:element name="MobilePhone" type="xs:string"/>
+                <xs:element name="LandlinePhone" type="xs:string"/>
+            </xs:choice>
+        </xs:sequence>
+    </xs:complexType>
+
+    <xs:complexType name="PreferencesType">
+        <xs:sequence>
+            <xs:element name="PrefKey" type="xs:string"/>
+            <xs:element name="PrefValue" type="xs:boolean"/>
+        </xs:sequence>
+    </xs:complexType>
+</xs:schema>
