@@ -12,6 +12,37 @@ from wsdl_parser import extract_wsdl_schema
 # Load environment variables
 load_dotenv()
 
+def snake_to_camel(name: str) -> str:
+    """Convert snake_case string to camelCase."""
+    components = name.split('_')
+    return components[0] + ''.join(x.title() for x in components[1:])
+
+def convert_json_properties_to_camel(json_str: str) -> str:
+    """Convert all snake_case keys in a JSON string to camelCase."""
+    try:
+        data = json.loads(json_str)
+        json_text = json.dumps(data)
+        # Replace any snake_case key patterns (quoted strings containing underscores)
+        def replace_key(match):
+            key = match.group(1)
+            if '_' in key:
+                return f'"{snake_to_camel(key)}"'
+            return match.group(0)
+        return re.sub(r'"([a-z][a-z0-9]*(?:_[a-z0-9]+)+)"\s*:', lambda m: replace_key(m) + ':', json_text)
+    except Exception:
+        return json_str
+
+def convert_java_json_properties_to_camel(java_code: str) -> str:
+    """Post-process generated Java code: convert all @JsonProperty snake_case values to camelCase."""
+    def replace_annotation(match):
+        value = match.group(1)
+        if '_' in value:
+            camel = snake_to_camel(value)
+            print(f"[PostProcess] @JsonProperty(\"{value}\") -> @JsonProperty(\"{camel}\")")
+            return f'@JsonProperty("{camel}")'
+        return match.group(0)
+    return re.sub(r'@JsonProperty\("([^"]+)"\)', replace_annotation, java_code)
+
 class MigrationState(TypedDict):
     wsdl_path: str
     reference_context: str
@@ -59,13 +90,14 @@ You must output your response in the following format exactly, with no additiona
 ```
 
 ### JAVA DTOS
-Separate each Java class using this exact header format: `// FILE: <ClassName>.java`
+Generate one class per type found in the schema. Separate each class using this exact delimiter format: `// FILE: <ClassName>.java`
+The class name must be derived from the schema type name — do NOT reuse any names from these instructions.
 ```java
-// FILE: AuditHeaderType.java
-public class AuditHeaderType { ... }
+// FILE: <FirstClassNameFromSchema>.java
+public class <FirstClassNameFromSchema> { ... }
 
-// FILE: CustomerProfile.java
-public class CustomerProfile { ... }
+// FILE: <SecondClassNameFromSchema>.java
+public class <SecondClassNameFromSchema> { ... }
 ```
 """
 
@@ -97,7 +129,9 @@ Please generate the JSON SCHEMA and JAVA DTOS.
     # Parse out the JSON schema block
     json_match = re.search(r"```json\s*(.*?)\s*```", content, re.DOTALL)
     if json_match:
-        state["generated_json_contract"] = json_match.group(1).strip()
+        raw_json = json_match.group(1).strip()
+        # Post-process: guarantee all JSON keys are camelCase
+        state["generated_json_contract"] = convert_json_properties_to_camel(raw_json)
     else:
         state["generated_json_contract"] = ""
         state["validation_errors"].append("Failed to extract JSON block from LLM output.")
@@ -105,7 +139,9 @@ Please generate the JSON SCHEMA and JAVA DTOS.
     # Parse out the Java code block
     java_match = re.search(r"```java\s*(.*?)\s*```", content, re.DOTALL)
     if java_match:
-        state["generated_code"] = java_match.group(1).strip()
+        raw_java = java_match.group(1).strip()
+        # Post-process: guarantee all @JsonProperty values are camelCase
+        state["generated_code"] = convert_java_json_properties_to_camel(raw_java)
     else:
         state["generated_code"] = ""
         state["validation_errors"].append("Failed to extract Java block from LLM output.")
